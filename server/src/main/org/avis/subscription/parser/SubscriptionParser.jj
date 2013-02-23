@@ -1,0 +1,496 @@
+/*
+ *  Avis event router.
+ *  
+ *  Copyright (C) 2008 Matthew Phillips <avis@mattp.name>
+ *
+ *  This program is free software: you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  version 3 as published by the Free Software Foundation.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ *  General Public License for more details.
+ * 
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+/*
+ * JavaCC spec for the Avis subscription parser. Requires JavaCC 4.0 or later. 
+ */
+options
+{
+  JDK_VERSION = "1.5";
+  STATIC = false;
+  UNICODE_INPUT = true;
+}
+
+PARSER_BEGIN (SubscriptionParser)
+
+package org.avis.subscription.parser;
+
+import java.util.*;
+import java.util.regex.PatternSyntaxException;
+
+import org.avis.subscription.ast.*;
+import org.avis.subscription.ast.nodes.*;
+
+@SuppressWarnings ("all")
+public class SubscriptionParser extends SubscriptionParserBase
+{
+  Node doParse ()
+    throws ParseException
+  {
+    return Start ();
+  }
+}
+
+PARSER_END (SubscriptionParser)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+}
+
+TOKEN : /* IDENTIFIERS */
+{
+  < IDENTIFIER:  (<LETTER>|<BACKSLASH>) (<LETTER>|<BACKSLASH>|<ID_CHAR>)* >
+|
+  < #LETTER:  [ "a"-"z", "A"-"Z", "_"] >
+
+| < #ID_CHAR: [ "\u0021", "\u0023"-"\u0026", "\u002a"-"\u002b",
+                "\u002d"-"\u005a", "\u005e"-"\u00ff" ] >
+|
+  < #BACKSLASH: "\\" ~[] >
+}
+
+TOKEN : /* LITERALS */
+{
+  < INTEGER_LITERAL:
+        <DECIMAL_LITERAL> (["l","L"])?
+      | <HEX_LITERAL> (["l","L"])?
+      | <OCTAL_LITERAL> (["l","L"])?
+  >
+|
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+|
+  < #HEX_LITERAL: "0" ["x","X"] (<HEX_DIGIT>)+ >
+|
+  < #HEX_DIGIT: ["0"-"9","a"-"f","A"-"F"] >
+|
+  < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+|
+  < REAL_LITERAL: (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)? >
+|
+  < #EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+|
+  < STRING_LITERAL: <DQUOTE_STRING_LITERAL> | <SQUOTE_STRING_LITERAL> >
+|
+  < #DQUOTE_STRING_LITERAL: "\"" (~["\"", "\\"] | <BACKSLASH_EXPR>)* "\"" >
+|
+  < #SQUOTE_STRING_LITERAL: "'"  (~["'", "\\"] | <BACKSLASH_EXPR>)* "'" >
+|
+  < #BACKSLASH_EXPR: "\\" ~[] >
+}
+
+Node Start () :
+{
+  Node node;
+}
+{
+  node = SubExp () <EOF>
+  
+  {
+    return node;
+  }
+}
+
+Node SubExp (): {}
+{
+  {
+    return BoolOrExp ();
+  }
+}
+
+Node BoolOrExp ():
+{
+  Node node1;
+  Node node2;
+  Or or = null;
+}
+{
+  node1 = BoolXorExp ()
+    ("||" node2 = BoolXorExp ()
+    {
+      if (or == null)
+        node1 = or = new Or (node1);
+      
+      or.addChild (node2);
+    })*
+    
+  {
+    return node1;
+  }
+}
+
+Node BoolXorExp ():
+{
+  Node node1;
+  Node node2;
+  Xor xor = null;
+}
+{
+  node1 = BoolAndExp ()
+    ("^^" node2 = BoolAndExp ()
+    {
+      if (xor == null)
+        node1 = xor = new Xor (node1);
+      
+      xor.addChild (node2);
+    })*
+    
+  {
+    return node1;
+  }
+}
+
+Node BoolAndExp ():
+{
+  Node node1;
+  Node node2;
+  And and = null;
+}
+{
+  node1 = BoolExp ()
+    ("&&" node2 = BoolExp ()
+    {
+      if (and == null)
+        node1 = and = new And (node1);
+      
+      and.addChild (node2);
+    })*
+  
+  {
+    return node1;
+  }
+}
+
+Node BoolExp () :
+{
+  Node node1;
+  Node node2;
+}
+{
+  "!" node1 = BoolExp ()     {return new Not (node1);} |  
+  node1 = MathExp ()
+  (
+    ">"  node2 = MathExp ()  {return new Compare (node1, node2,  1, false);} |
+    ">=" node2 = MathExp ()  {return new Compare (node1, node2,  1, true);} |
+    "<"  node2 = MathExp ()  {return new Compare (node1, node2, -1, false);} |
+    "<=" node2 = MathExp ()  {return new Compare (node1, node2, -1, true);} |
+    "==" node2 = MathExp ()  {return new Compare (node1, node2,  0, true);} |
+    "!=" node2 = MathExp ()  {return new Not (new Compare (node1, node2,  0, true));}    
+  )? {return node1;}
+}
+
+Node MathExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathAddExp ()
+    ( "-" { node1 = new MathMinus (node1, MathAddExp ()); } )*
+
+  { return node1; }
+}
+
+Node MathAddExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathMultExp ()
+    ( "+" { node1 = new MathPlus (node1, MathMultExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathMultExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathDivExp ()
+    ( "*" { node1 = new MathMult (node1, MathDivExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathDivExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathModExp ()
+    ( "/" { node1 = new MathDiv (node1, MathModExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathModExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathBitShiftLeftExp ()
+    ( "%" { node1 = new MathMod (node1, MathBitShiftLeftExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathBitShiftLeftExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathBitShiftRightExp ()
+    ( "<<" { node1 = new MathBitShiftLeft (node1, MathBitShiftRightExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathBitShiftRightExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathBitLogShiftRightExp ()
+    ( ">>" { node1 = new MathBitShiftRight (node1, MathBitLogShiftRightExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathBitLogShiftRightExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathBitOrExp ()
+    ( ">>>" { node1 = new MathBitLogShiftRight (node1, MathBitOrExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathBitOrExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathBitXorExp ()
+    ( "|" { node1 = new MathBitOr (node1, MathBitXorExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathBitXorExp () :
+{
+  Node node1;
+}
+{
+  node1 = MathBitAndExp ()
+    ( "^" { node1 = new MathBitXor (node1, MathBitAndExp ()); } )*
+  
+  { return node1; }
+}
+
+Node MathBitAndExp () :
+{
+  Node node1;
+}
+{
+  node1 = ValueExp ()
+    ( "&" { node1 = new MathBitAnd (node1, ValueExp ()); } )*
+  
+  { return node1; }
+}
+
+Node ValueExp () :
+{
+  Node node;
+}
+{
+  LOOKAHEAD (2) // differentiate between Name and Function
+   
+  node = Function ()       {return node;} |
+  node = Name ()           {return node;} |
+  node = NumLiteral ()     {return node;} |
+  node = StringLiteral ()  {return node;} |
+  "-" node = ValueExp ()   {return new MathUnaryMinus (node);} |
+  "+" node = ValueExp ()   {return node;} | 
+  "~" node = ValueExp ()   {return new MathBitInvert (node);} |
+  "(" node = SubExp () ")" {return node;}
+}
+
+Node Function () :
+{
+  Token t;
+  Node node;
+  String func;
+}
+{
+  t = <IDENTIFIER> "("
+
+  {
+    func = t.image;
+    
+    if (func.equals ("begins-with"))
+      node = StrBeginsWith.create (StringCompareArgs ());
+    else if (func.equals ("ends-with"))
+      node = StrEndsWith.create (StringCompareArgs ());
+    else if (func.equals ("contains"))
+      node = StrContains.create (StringCompareArgs ());
+    else if (func.equals ("regex"))
+      node = StrRegex.create (StringCompareArgs ());
+    else if (func.equals ("fold-case"))
+      node = new StrFoldCase (StringValue ());
+    else if (func.equals ("equals"))
+      node = Compare.createEquals (CompareArgs ());
+    else if (func.equals ("require"))
+      node = new Require (Name ());
+    else if (func.equals ("int32"))
+      node = new Type (Name (), Integer.class);
+    else if (func.equals ("int64"))
+      node = new Type (Name (), Long.class);
+    else if (func.equals ("real64"))
+      node = new Type (Name (), Double.class);
+    else if (func.equals ("string"))
+      node = new Type (Name (), String.class);
+    else if (func.equals ("opaque"))
+      node = new Type (Name (), byte [].class);
+    else if (func.equals ("nan"))
+      node = new Nan (Name ());
+    else if (func.equals ("wildcard"))
+      node = StrWildcard.create (StringCompareArgs ());
+    else if (func.equals ("size"))
+      node = new Size (Name ());
+    else if (func.equals ("decompose") || func.equals ("decompose-compat"))
+      node = new StrUnicodeDecompose
+        (StringValue (),
+         func.equals ("decompose") ? StrUnicodeDecompose.Mode.DECOMPOSE :
+                                     StrUnicodeDecompose.Mode.DECOMPOSE_COMPAT);
+    else
+    {
+      node = null;
+      AnyArgs (); // error recover by skipping args
+    }
+  }
+  
+  ")"
+  
+  {
+    if (node == null)
+      throw new ParseException ("Unknown function: " + func);
+    else
+      return node;
+  }
+}
+
+Node StringValue () :
+{
+  Node node;
+}
+{
+  (
+    LOOKAHEAD (2)
+    node = Function () |
+    node = StringLiteral () |
+    node = Name ()
+  )
+  
+  {
+    return node;
+  }
+}
+
+// Args for the compare() function
+List CompareArgs () :
+{
+  ArrayList args = new ArrayList ();
+}
+{
+  { args.add (StringValue ()); } ( "," { args.add (MathExp ()); } )+
+    
+  {
+    return args;
+  }
+}
+
+// Args for any string comparison function
+List StringCompareArgs () :
+{
+  ArrayList args = new ArrayList ();
+}
+{
+  {args.add (StringValue ()); } ("," {args.add (StringLiteral ());} )+
+  
+  {
+    return args;
+  }
+}
+
+// Match any arguments. Used for error recovery
+void AnyArgs () : {}
+{
+  ( ( StringValue () | NumLiteral () ) 
+    ( "," (StringValue () | NumLiteral ()) )* )?
+}
+
+Const NumLiteral () :
+{
+  Token t;
+}
+{
+  t=<INTEGER_LITERAL>
+  {
+    Number value;
+    char lastChar = t.image.charAt (t.image.length () - 1);
+    
+    if (lastChar == 'l' || lastChar == 'L')
+      value = Long.decode (t.image.substring (0, t.image.length () - 1));
+    else
+      value = Integer.decode (t.image);
+      
+    return new Const (value);
+  } 
+  |
+  t=<REAL_LITERAL>
+  {
+    return new Const (new Double (t.image));
+  }
+}
+
+Field Name () :
+{
+  Token t;
+}
+{
+  t=<IDENTIFIER>
+  {
+    return new Field (stripBackslashes (t.image));
+  }
+}
+
+Const StringLiteral () :
+{
+  Token t;
+}
+{
+  t=<STRING_LITERAL>
+  {
+    return new Const
+      (stripBackslashes (t.image.substring (1, t.image.length () - 1)));
+  }  
+}

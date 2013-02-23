@@ -1,0 +1,677 @@
+<?xml version="1.0"?>
+<!--
+  ====================================================================== 
+  Avis event notification server
+  ======================================================================
+-->
+<project name="avis.server" default="jar-server">
+  
+  <description>Avis event router server</description>
+  
+  <property file="avis-server.properties" />
+
+  <!-- The formal version number in major.minor form -->
+  <property name="version"
+            value="${avis.version.major}.${avis.version.minor}.${avis.version.patch}" />
+
+  <property name="release" value="${avis.release}" />
+
+  <!-- The release name: typically the version number followed by a
+       release tag e.g. 1.0.2dev or 1.1.0. -->
+  <property name="release-name" value="${version}${release}" />
+
+  <property name="server" value="${basedir}" />
+  
+  <property name="common" value="${server}/../common" />
+  <property name="third_party" value="${server}/../third_party" />
+  <property name="client" value="${server}/../client" />
+  
+  <property name="avis-root" value="${server}/../.." />
+
+  <property name="src-zip" value="build/avis-src-${release-name}.zip" />
+  <property name="src-zip-root" value="avis-${release-name}" />
+
+  <!-- JavaCC 4.0 or later: only needed if you need to change parser -->
+  <property name="javacc" value="${avis-root}/../javacc-4.0" />
+
+  <!-- InnoSetup installation (5.1.9 or later): only needed if building the
+       Windows self-installer. -->
+  <property name="innosetup" value="C:\Program Files\Inno Setup 5\iscc.exe" />
+
+  <!-- Mac OS X packagemaker app (part of Apple XCode): only needed if
+       you need to build the Mac OS X .pkg distro. -->
+  <property name="packagemaker"
+            value="/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker" />
+  
+  <property name="java.library.path" value="${server}/lib"/>
+
+  <path id="classpath">
+    <fileset dir="${common}/lib">
+      <include name="*.jar" />
+    </fileset>    
+    
+    <fileset dir="lib">
+      <include name="fastutil-subset.jar" />
+      <include name="jackson-all.jar" />
+      <include name="zmq.jar" unless="zmq-no-bundle"/>
+    </fileset>
+          
+    <pathelement path="classes/main" />
+    <pathelement path="classes/test" />
+    <pathelement path="${common}/classes/main" />
+    <pathelement path="${common}/classes/test" />
+  </path>
+  
+  <target name="properties" unless="avisd-jar-uptodate">
+    <mkdir dir="classes/main" />
+  
+    <tstamp>
+      <format property="build-date"
+              pattern="dd-MMM-yyyy HH:mm:ss ZZ" locale="en" />
+    </tstamp>
+        
+    <filter token="build-date" value="${build-date}" />
+    
+    <copy file="avis-server.properties" tofile="classes/main/avis.properties"
+          overwrite="yes" filtering="yes" />
+  </target>
+
+  <target name="compile" description="Compile source and tests" depends="copy-third-party-to-lib">
+    <ant dir="${common}" target="compile" inheritall="false"/>
+    
+    <ant antfile="${common}/build-common.xml" target="compile"
+         inheritrefs="true" inheritall="true"/>
+  </target>
+
+  <condition property="jzmq-needs-compile">
+    <and> 
+      <not> <available file="${third_party}/installed_jzmq"/> </not>
+      <not> <isset property="zmq-no-bundle"/> </not>
+    </and>
+  </condition>
+  <condition property="zmq-needs-compile">
+    <and>
+      <not> <available file="${third_party}/installed_zmq"/> </not>
+      <not> <isset property="zmq-no-bundle"/> </not>
+    </and>
+  </condition>
+  <property name="zmq-version" value="3.2.2" />
+
+  <target name="compile-zmq" description="Build libzmq and install to third_party/installed_zmq"
+    if="zmq-needs-compile">
+
+    <exec executable="tar" dir="${third_party}">
+      <arg value="xzf" />
+      <arg value="zeromq-${zmq-version}.tar.gz" />
+    </exec>
+
+    <exec executable="./configure" dir="${third_party}/zeromq-${zmq-version}">
+      <arg value="--prefix=${third_party}/installed_zmq"/>
+    </exec>
+
+    <exec executable="make" dir="${third_party}/zeromq-${zmq-version}">
+    </exec>
+
+    <exec executable="mkdir" dir="${third_party}">
+      <arg value="installed_zmq"/>
+    </exec>
+
+    <exec executable="make" dir="${third_party}/zeromq-${zmq-version}">
+      <arg value="install"/>
+    </exec>
+  </target>
+
+  <target name="clean-zmq" description="delete libzmq build">
+    <exec executable="rm" dir="${third_party}">
+      <arg value="-rf"/>
+      <arg value="${third_party}/zeromq-3.2.2"/>
+    </exec>
+
+    <exec executable="rm" dir="${third_party}">
+      <arg value="-rf"/>
+      <arg value="${third_party}/installed_zmq"/>
+    </exec>
+  </target>
+
+  <target name="compile-jzmq" description="Build jzmq and install to third_party/installed_jzmq"
+    depends="compile-zmq"
+    if="jzmq-needs-compile">
+
+    <exec executable="unzip" dir="${third_party}">
+      <arg value="jzmq-master.zip" />
+    </exec>
+
+    <exec executable="./autogen.sh" dir="${third_party}/jzmq-master"/>
+
+    <exec executable="./configure" dir="${third_party}/jzmq-master">
+      <arg value="--prefix=${third_party}/installed_jzmq"/>
+      <arg value="--with-zeromq=${third_party}/installed_zmq"/>
+    </exec>
+
+    <exec executable="make" dir="${third_party}/jzmq-master">
+    </exec>
+
+    <exec executable="mkdir" dir="${third_party}">
+      <arg value="installed_jzmq"/>
+    </exec>
+
+    <exec executable="make" dir="${third_party}/jzmq-master">
+      <arg value="install"/>
+    </exec>
+  </target>
+
+  <target name="clean-jzmq" description="delete jzmq build">
+    <exec executable="rm" dir="${third_party}">
+      <arg value="-rf"/>
+      <arg value="${third_party}/jzmq-master"/>
+    </exec>
+
+    <exec executable="rm" dir="${third_party}">
+      <arg value="-rf"/>
+      <arg value="${third_party}/installed_jzmq"/>
+    </exec>
+  </target>
+
+  <target name="copy-third-party-to-lib"
+    depends="compile-jzmq,compile-zmq"
+    unless="zmq-no-bundle">
+    <exec executable="sh" dir="${server}/lib">
+      <arg value="-c"/>
+      <arg value="cp -d ${third_party}/installed_zmq/lib/libzmq*.so* ."/>
+    </exec>
+    <exec executable="sh" dir="${server}/lib">
+      <arg value="-c"/>
+      <arg value="cp -d ${third_party}/installed_jzmq/lib/libjzmq*.so* ."/>
+    </exec>
+    <exec executable="cp" dir="${server}/lib">
+      <arg value="${third_party}/installed_jzmq/share/java/zmq.jar"/>
+      <arg value="."/>
+    </exec>
+  </target>
+
+  <target name="clean-third-party-from-lib">
+    <exec executable="sh" dir="${server}/lib">
+      <arg value="-c"/>
+      <arg value="rm -f libjzmq*.so* libzmq*.so* zmq.jar"/>
+    </exec>
+  </target>
+
+  <target name="tests" depends="compile" description="Run unit tests">
+    <ant antfile="${common}/build-common.xml" target="tests" inheritrefs="true" />
+  </target>
+
+  <target name="test-federation" depends="compile">
+    <junit printsummary="yes" fork="yes" haltonfailure="yes">
+      <classpath refid="classpath" />
+      <formatter type="plain" usefile="false" />
+      <test name="org.avis.federation.JUTestFederation" />
+    </junit>
+  </target>
+
+  <target name="clean" description="Clean built artifacts"
+    depends="clean-jzmq,clean-zmq,clean-third-party-from-lib">
+    <ant antfile="${common}/build-common.xml" target="clean" inheritall="true" />
+    
+    <delete file="lib/avis-router.jar" includeemptydirs="true" />
+  </target>
+
+  <target name="clean-javacc" description="Clean JavaCC-generated files">
+    <delete>
+      <fileset dir="src/main/org/avis/subscription/parser">
+        <include name="SubscriptionParser.java" />
+        <include name="SubscriptionParserConstants.java" />
+        <include name="SubscriptionParserTokenManager.java" />
+        <include name="TokenMgrError.java" />
+        <include name="Token.java" />
+        <include name="SimpleCharStream.java" />
+        <include name="ParseExceptionjava" />
+      </fileset>
+    </delete>
+  </target>
+	
+  <target name="javacc-subscription-parser"
+          description="Generate the subscription parser with JavaCC">
+    <javacc javacchome="${javacc}"
+            target="src/main/org/avis/subscription/parser/SubscriptionParser.jj" />
+  </target>
+
+  <target name="avis-router-jar-uptodate">
+    <dependset>
+      <srcfileset dir="${common}/classes/main" includes="**/*.class" />
+      <srcfileset dir="classes/main" includes="**/*.class" />
+      
+      <targetfileset dir="build">
+        <include name="avis-router.jar" />
+      </targetfileset>
+    </dependset>
+      
+    <condition property="avis-router-jar-uptodate">
+      <and>
+        <available file="build/avis-router.jar" />
+      </and>
+    </condition>
+  </target>
+    
+  <target name="jar-server" description="Build avis-router.jar" 
+          depends="compile,avis-router-jar-uptodate,properties"
+          unless="avis-router-jar-uptodate">
+    
+    <taskdef name="jarx" classname="dsto.dfc.tools.JarXTask"
+             classpath="${common}/lib/jarx.jar" />
+
+    <mkdir dir="build" />
+      
+    <jarx archive="build/avis-router.jar"
+          mainClass="org.avis.router.Main"
+          classpathref="classpath">
+      
+      <include name="avis.properties" />
+    </jarx>
+    
+    <mkdir dir="lib" />
+    <copy file="build/avis-router.jar" todir="lib" />
+  </target>
+
+  <target name="jar-fastutil-subset"
+          description="Build minimal fastutil subset">
+    
+    <taskdef name="jarx" classname="dsto.dfc.tools.JarXTask"
+             classpath="${common}/lib/jarx.jar" />
+
+    <mkdir dir="lib" />
+    
+    <path id="fastutil-full">
+      <fileset dir="lib" includes="fastutil-5*.jar" />
+    </path>
+      
+    <jarx archive="lib/fastutil-subset.jar"
+          classpathref="fastutil-full">
+      <include name="it/unimi/dsi/fastutil/longs/Long2ObjectOpenHashMap.class" />
+      <include name="it/unimi/dsi/fastutil/longs/LongArrayList.class" />
+    </jarx>    
+  </target>
+  
+  <!-- Build the dump-host-addresses.jar utility -->
+  <target name="jar-dumphostaddresses">
+      
+    <taskdef name="jarx" classname="dsto.dfc.tools.JarXTask"
+             classpath="${common}/lib/jarx.jar" />
+
+    <mkdir dir="bin" />
+      
+    <jarx archive="bin/dump-host-addresses.jar"
+          classpathref="classpath" 
+          mainclass="org.avis.tools.DumpHostAddresses">
+    </jarx>    
+  </target>
+
+  <!-- Build the dos-attack.jar utility -->
+  <target name="jar-dosattack">
+       
+    <taskdef name="jarx" classname="dsto.dfc.tools.JarXTask"
+             classpath="${common}/lib/jarx.jar" />
+
+    <mkdir dir="bin" />
+        
+    <jarx archive="bin/dos-attack.jar"
+          classpathref="classpath" 
+          mainclass="org.avis.tools.DosAttack">
+    </jarx>    
+  </target>
+
+  <target name="dist-source" depends="jar-server"
+          description="Build the source distro">
+    
+    <tempfile property="src_tmp" prefix="src_tmp" destdir="build" />
+ 
+    <mkdir dir="${src_tmp}/common/src/main" />
+    <mkdir dir="${src_tmp}/common/src/test" />
+    <mkdir dir="${src_tmp}/server/src/main" />
+    <mkdir dir="${src_tmp}/server/src/test" />
+      
+    <!-- create copy of source with license headers -->
+    
+    <property name="header" value="src/avis_java_header.txt" />
+
+    <copy todir="${src_tmp}/server">
+      <fileset dir=".">
+        <include name="src/main/**/*.java"/>
+        <include name="src/main/**/*.jj"/>
+        <include name="src/test/**/*.java"/>
+      </fileset>
+      
+      <filterchain>
+        <concatfilter prepend="${header}" />
+      </filterchain>
+    </copy>
+
+    <copy todir="${src_tmp}/common">
+      <fileset dir="${common}">
+        <include name="src/main/**/*.java"/>
+        <include name="src/test/**/*.java"/>
+      </fileset>
+      
+      <filterchain>
+        <concatfilter prepend="${header}" />
+      </filterchain>
+    </copy>
+
+    <zip destfile="${src-zip}">
+      
+      <!-- source -->
+      <zipfileset dir="${src_tmp}" prefix="${src-zip-root}">
+        <include name="**/*" />
+      </zipfileset>
+      
+      <!-- others -->
+      <zipfileset dir="." prefix="${src-zip-root}/server">
+        <include name=".project" />
+        <include name=".classpath" />
+        <include name=".settings/*" />
+        <include name="build.xml" />
+        <include name="lib/*.jar" />
+        <include name="etc/avisd.config" />
+        <include name="doc/history.txt" />
+        <include name="doc/README.txt" />
+        <include name="doc/LICENSE.txt" />
+        <include name="src/avis_java_header.txt" />
+        <include name="packaging/**" />
+        <include name="avis-server.properties" />
+      </zipfileset>
+      
+      <zipfileset dir="." prefix="${src-zip-root}/server" filemode="755">
+        <include name="bin/avisd" />
+      </zipfileset>
+      
+      <zipfileset dir="${common}" prefix="${src-zip-root}/common">
+        <include name=".project" />
+        <include name=".classpath" />
+        <include name=".settings/*" />
+        <include name="build.xml" />
+        <include name="build-common.xml" />
+        <include name="lib/*.jar" />
+      </zipfileset>
+
+    </zip>
+    
+    <!-- blow away temporary files -->
+    <delete dir="${src_tmp}" />
+  </target>
+  
+  <!-- unzip router distro and check it can build a new distro -->
+  <target name="test-source-dist" depends="dist-source"
+          description="Test the router source distribution package">
+    <tempfile property="tmp" prefix="dist_tmp" destdir="build" />
+    
+    <unzip dest="${tmp}" src="${src-zip}" />
+    
+    <ant dir="${tmp}/${src-zip-root}/server" target="clean"
+         inheritall="false">
+      <property name="common" value="${tmp}/${src-zip-root}/common" />
+    </ant>
+    
+    <ant dir="${tmp}/${src-zip-root}/server" target="dist-source"
+         inheritall="false">
+      <property name="common" value="${tmp}/${src-zip-root}/common" />
+    </ant>
+    
+    <delete dir="${tmp}" />
+  </target>
+
+  <target name="dist-osx" depends="jar-server,jar-tools"
+          description="Build the Mac OS X binary distro (OS X command line only)">
+
+    <property name="temp" value="${basedir}/build/tmp/osx_package" />
+    <property name="root" value="${temp}/root" />
+    <property name="resources" value="${temp}/resources" />
+    <property name="startup" value="${root}/Library/LaunchDaemons" />
+    <property name="package" value="Avis-${release-name}.pkg" />
+
+    <filter token="release" value="${release-name}" />
+    <filter token="major_version" value="${avis.version.major}" />
+    <filter token="minor_version" value="${avis.version.minor}" />
+    <filter token="version" value="${version}" />
+    
+    <!-- clean temp area -->
+    <antcall target="fn:rm-as-root">
+      <param name="root" value="${temp}" />
+    </antcall>
+
+    <!-- copy startup items -->
+    <mkdir dir="${startup}"/>
+    
+    <copy file="packaging/osx/org.avis.avisd.plist"
+          todir="${startup}" preservelastmodified="true" />
+    
+    <!-- copy package items -->
+    <copy file="packaging/osx/welcome.txt"
+          tofile="${resources}/Welcome.txt" preservelastmodified="true" />
+    <copy file="packaging/osx/license.rtf"
+          tofile="${resources}/License.rtf" preservelastmodified="true" />
+    <copy file="packaging/osx/Info.plist.in"
+          tofile="${temp}/Info.plist" preservelastmodified="true"
+          filtering="yes" />
+   
+    <!-- add standard Unix distro -->
+    <antcall target="fn:build-unix-dist-layout">
+      <param name="root" value="${root}/usr/local" />
+    </antcall>
+   
+    <!-- fix perms, set ownership -->
+    <chmod perm="0755">
+      <dirset dir="${root}" />
+    </chmod>
+
+    <chmod perm="0644">
+      <fileset dir="${root}" />
+    </chmod>
+
+    <chmod perm="0755">
+      <fileset dir="${root}/usr/local/sbin" />
+      <fileset dir="${root}/usr/local/bin" />
+    </chmod>
+    
+    <chmod perm="1775" dir="${root}/Library" />
+    <chmod perm="0755" dir="${startup}" />
+    <chmod perm="0644" file="${startup}/*.plist" />
+ 
+    <antcall target="fn:set-unix-admin-ownership">
+      <param name="root" value="${root}" />
+    </antcall>
+
+    <!-- /Library should be root:admin -->
+    <exec executable="sudo">
+      <arg line="-p 'Please enter sudo password for chown: '" />
+      <arg line="chown root:admin" />
+      <arg value="${root}/Library" />
+    </exec>
+
+    <mkdir dir="build" />
+
+    <exec executable="${packagemaker}">
+      <arg value="-build" />
+      <arg value="-p" />
+      <arg value="${basedir}/build/${package}" />
+      <arg value="-f" />
+      <arg value="${root}" />
+      <arg value="-r" />
+      <arg value="${resources}" />
+      <arg value="-i" />
+      <arg value="${temp}/Info.plist" />
+      <arg value="-d" />
+      <arg value="${basedir}/packaging/osx/Description.plist" />
+      <arg value="-v" />
+    </exec>
+
+    <!-- OS X package files use symlinks, use tar to preserve -->
+    <exec executable="tar">
+      <arg value="jcf" />
+      <arg value="build/Avis-${release-name}.tbz" />
+      <arg value="-C" />
+      <arg value="build" />
+      <arg value="${package}" />
+    </exec>
+
+    <!-- clean temp area -->
+    <antcall target="fn:rm-as-root">
+      <param name="root" value="${temp}" />
+    </antcall>
+
+  </target>
+  
+  <target name="jar-tools">
+    <ant dir="${client}" target="jar-tools"
+         inheritall="false" inheritrefs="false" />
+  </target>
+    
+  <target name="dist-fedora" depends="jar-server,jar-tools"
+          description="Build the Red Hat Fedora Core RPM distro">
+
+    <property name="root" value="${basedir}/build/tmp/rpm_root" />
+    <delete dir="${root}" />
+    
+    <mkdir dir="${root}/SOURCES" />
+    <mkdir dir="${root}/BUILD" />
+    <mkdir dir="${root}/RPMS" />
+    <mkdir dir="${root}/SRPMS" />
+    <mkdir dir="${root}/SPECS" />
+
+    <tstamp>
+      <format property="release-date" pattern="yyyyMMdd" />
+    </tstamp>
+
+    <exec executable="rpmbuild" failonerror="true">
+      <arg value="-bb" />
+      <arg value="--define" />
+      <arg value="_topdir ${root}" />
+      <arg value="--define" />
+      <arg value="_avis_version ${version}" />
+      <arg value="--define" />
+      <arg value="_avis_release ${release-date}${release}" />
+      <arg value="--define" />
+      <arg value="_avis_server ${server}" />
+      <arg value="--define" />
+      <arg value="_avis_client ${client}" />
+      <arg value="${server}/packaging/fedora/avis.spec" />
+    </exec>
+
+    <copy file="${root}/RPMS/noarch/avis-${version}-${release-date}${release}.noarch.rpm"
+          tofile="build/avis-${release-name}.rpm" />
+
+    <delete dir="${root}" />
+
+  </target>
+
+  <!-- Create a tarball distro. Not part of standard set. -->
+  <target name="dist-unix" depends="jar-server,jar-tools"
+          description="Build a Unix binary distro">
+    <property name="temp" value="${basedir}/build/tmp/unix" />
+    <property name="root" value="${temp}/root" />
+
+    <!-- clean temp area -->
+    <delete dir="${temp}" />
+    
+    <!-- create standard Unix distro -->
+    <antcall target="fn:build-unix-dist-layout">
+      <param name="root" value="${root}" />
+    </antcall>
+   
+    <!-- add installer files -->
+    <copy file="packaging/unix/README.txt" todir="${temp}" />
+    <copy file="packaging/unix/install.sh" todir="${temp}" />
+
+    <!-- tar it up -->
+    <tar destfile="build/avis-${release-name}.tar.bz2"
+         compression="bzip2">
+      <tarfileset prefix="avis-${release-name}" dir="${temp}"
+                  mode="0755">
+        <include name="install.sh" />
+        <include name="root/bin/*" />
+        <include name="root/sbin/*" />
+      </tarfileset>
+      <tarfileset prefix="avis-${release-name}" dir="${temp}">
+        <include name="root/libexec/avis/*.jar" />
+        <include name="root/etc/avis/*" />
+        <include name="README.txt" />
+      </tarfileset>
+    </tar>
+
+    <!-- clean temp area -->
+    <delete dir="${temp}" />    
+  </target>
+  
+  <target name="dist-windows" depends="jar-server"
+          description="Build the Windows self-installer distro">
+    <mkdir dir="build" />
+    
+    <filter token="release-name" value="${release-name}" />
+    <filter token="version" value="${version}" />
+    
+    <copy file="packaging/windows/installer/avis.iss.in"
+          tofile="packaging/windows/installer/avis.iss" overwrite="true"
+          filtering="true" />
+        
+    <exec executable="${innosetup}">
+      <arg value="/O${basedir}\build" />
+      <arg value="/Favis-${release-name}" />
+      <arg value="/Q" />
+      <arg value="${basedir}\packaging\windows\installer\avis.iss" />
+    </exec>
+
+    <!-- <delete file="packaging/windows/installer/avis.iss" /> -->
+  </target>
+
+  <!-- build standard Unix distro layout in ${root} -->
+  <target name="fn:build-unix-dist-layout">
+
+    <copy file="bin/avisd"
+          tofile="${root}/sbin/avisd"
+          preservelastmodified="true" />
+    <copy file="lib/avis-router.jar"
+          tofile="${root}/libexec/avis/avis-router.jar"
+          preservelastmodified="true" />
+    <copy file="etc/avisd.config"
+          tofile="${root}/etc/avis/avisd.config"
+          preservelastmodified="true" />
+
+    <copy file="${client}/lib/avis-client.jar" todir="${root}/libexec/avis"
+          preservelastmodified="true" />
+    <copy file="${client}/lib/avis-tools.jar" todir="${root}/libexec/avis"
+          preservelastmodified="true" />
+    <copy file="${client}/bin/ec" todir="${root}/bin"
+          preservelastmodified="true" />
+    <copy file="${client}/bin/ep" todir="${root}/bin"
+          preservelastmodified="true" />
+
+  </target>
+
+  <!-- run "sudo rm -rf ${root}" -->
+  <target name="fn:rm-as-root">
+     <exec executable="sudo">
+      <arg line="-p 'Please enter sudo password for rm -rf ${root}: '" />
+      <arg line="rm -rf" />
+      <arg value="${root}" />
+    </exec>
+  </target>
+  
+  <!-- run "sudo chown -R root:wheel ${root}" -->
+  <target name="fn:set-unix-admin-ownership">
+    <exec executable="sudo">
+      <arg line="-p 'Please enter sudo password for chown -R root:wheel ${root}: '" />
+      <arg line="chown -R root:wheel" />
+      <arg value="${root}" />
+    </exec>
+  </target>
+  
+  <target name="changelog"
+          description="Generate a change log (needs previous rev #)">
+    <!-- Use command below to get previous release rev #
+         svn log -stop-on-copy https://avis.svn.sourceforge.net/svnroot/avis/tags/release_0.7 -->
+    <input addproperty="release_rev" message="Enter rev # of last release" />
+    <property name="component" value="server" />
+    
+    <ant antfile="${common}/build-common.xml" target="changelog" 
+         inheritrefs="true" />
+  </target>
+
+</project>

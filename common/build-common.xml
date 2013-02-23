@@ -1,0 +1,59 @@
+<!-- Avis common build macros -->
+<project name="avis.build-common">
+
+  <property name="debug" value="true" />
+  
+  <!-- svn2cl: only needed to generate changelog -->
+  <property name="svn2cl" value="/opt/local/bin/svn2cl" />
+      
+  <target name="compile" depends="compile-main,compile-tests" />
+
+  <target name="compile-main">
+    <mkdir dir="classes/main" />
+
+    <javac debug="${debug}" classpathref="classpath"
+           srcdir="src/main" destdir="classes/main" />
+  </target>
+
+  <target name="compile-tests">
+    <mkdir dir="classes/test" />
+
+    <javac debug="${debug}" classpathref="classpath"
+           srcdir="src/test" destdir="classes/test" />
+  </target>
+
+  <target name="compile-module">
+    <mkdir dir="classes/${module}" />
+
+    <javac debug="${debug}" classpathref="classpath"
+           srcdir="src/${module}" destdir="classes/${module}" />
+  </target>
+  
+  <target name="changelog">
+    <exec executable="${svn2cl}" searchpath="true">
+      <env key="PATH" path="/bin:/usr/bin:/usr/local/bin:/opt/local/bin" />
+      <arg line="-r ${release_rev}:HEAD https://avis.svn.sourceforge.net/svnroot/avis/trunk/java/${component}" />
+    </exec>
+  </target>
+ 
+  <target name="clean">
+    <delete dir="build" />
+    <delete dir="classes" />
+  </target>
+
+  <!-- Ant 1.6 needs "-lib lib" on command line to find JUnit -->
+  <target name="tests">
+    <junit fork="yes" haltonfailure="yes" printsummary="true">
+   
+      <formatter type="plain" usefile="false" />
+      <classpath refid="classpath" />
+      
+      <batchtest fork="yes" todir=".">
+        <fileset dir="src/test">
+          <include name="**/JU*.java" />
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+  
+</project>

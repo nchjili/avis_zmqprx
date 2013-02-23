@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!--
+  ====================================================================== 
+  Avis Common Core
+  ======================================================================
+-->
+<project name="avis.common" default="compile">
+  
+  <description>Avis common core</description>
+  
+  <property file="avis.properties" />
+  
+  <property name="common" value="${basedir}" />
+  <property name="avis-root" value="${common}/../.." />
+	
+  <path id="classpath">
+    <fileset dir="lib">
+      <include name="*.jar" />
+    </fileset>
+    <pathelement path="classes/main" />
+    <pathelement path="classes/test" />
+  </path>
+  
+  <target name="compile" description="Compile source and tests">
+    <ant antfile="${common}/build-common.xml" target="compile" inheritrefs="true" />
+  </target>
+
+  <target name="tests" depends="compile" description="Run unit tests">
+    <ant antfile="${common}/build-common.xml" target="tests" inheritrefs="true" />
+  </target>
+
+  <target name="clean" description="Clean built artifacts">
+    <ant antfile="${common}/build-common.xml" target="clean" />
+  </target>
+
+  <target name="jar-common" depends="compile"
+          description="Build avis-common.jar" unless="avis-common-uptodate">
+    
+    <mkdir dir="build" />
+    
+    <jar destfile="build/avis-common.jar">
+      <fileset dir="classes/main" includes="**/*.class" />
+    </jar>
+
+  </target>
+
+  <target name="jar-jarx">
+    
+    <!-- assume dfc.core at same level as Avis root -->
+    <property name="dfc.home" value="${avis-root}/../dfc.core" />
+    
+    <ant dir="${dfc.home}" target="compile" inheritall="false" />
+    
+    <jar destfile="lib/jarx.jar">
+      <fileset dir="${dfc.home}/classes">
+        <include name="dsto/dfc/tools/**/*.class" />
+      </fileset>
+    </jar>
+  </target>
+  
+  <target name="changelog"
+          description="Generate a change log (needs previous rev #)">
+    <!-- Use command below to get previous release rev #
+         svn log -stop-on-copy https://avis.svn.sourceforge.net/svnroot/avis/tags/release_0.7 -->
+    <input addproperty="release_rev" message="Enter rev # of last release" />
+    <property name="component" value="common" />
+    
+    <ant antfile="${common}/build-common.xml" target="changelog" 
+         inheritrefs="true" />
+  </target>
+
+  <target name="backup-sourceforge"
+          description="Backup SVN repository from Sourceforge">
+    <exec executable="rsync">
+      <arg line="-av avis.svn.sourceforge.net::svn/avis/* ../../../avis_backup/svn/" />
+    </exec>
+  </target>
+
+</project>

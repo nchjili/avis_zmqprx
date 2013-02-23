@@ -1,0 +1,332 @@
+Release 1.2.2 (February 20, 2009)
+----------------------------------------------------------------------
+
+ * Fixed bug that stopped secure messages being federated between Avis
+   and Mantara elvind routers. Note that this fix means that Avis
+   1.2.2 will not federate secure messages with previous Avis router
+   releases.
+
+
+Release 1.2.1 (March 9, 2008)
+----------------------------------------------------------------------
+
+This release fixes an error that could occur when using multiple
+federation links from a single router.
+
+ * Fixed race condition that could cause delivery of federated
+   messages to fail when using multiple federation links.
+
+ * Improved trace log output for federation.
+
+ * Fixed packaging error that broke source distribution.
+
+ * Removed bash-specific code from avisd script
+
+
+Release 1.2.0 (January 21, 2008)
+----------------------------------------------------------------------
+
+This release adds support for TLS/SSL security. It also includes a
+number of improvements to router administration and installation.
+
+ * Added support for using TLS/SSL to encrypt and authenticate client
+   and federator connections.
+
+ * Improved logging: now adds date to log messages and logs
+   notifications in verbose mode.
+
+ * The binary distributions now contain the ec and ep commands.
+
+ * Cleaned up the RPM package and Unix layout.
+
+ * Improved shortcuts installed in Programs menu in Windows
+   distribution.
+
+ * Now uses launchd to manage router service on Mac OS X rather than
+   the deprecated StartupItem mechanism.
+
+ * Router now sends Vendor-Identification with router name and version
+   in connection options.
+
+ * Added option to use wildcards in Federation.Apply-Class and removed
+   option to match against federation ID (which is usually
+   router-dependent as well as dynamic). The use of "@" to distinguish
+   host names from federation ID's is no longer required, but
+   supported for compatibility with Avis 1.1.
+
+ * Added Federation.Default-Class option to specify a default
+   federation class to be used when none of the Federation.Apply-Class
+   filters match.
+
+ * Fixed -logfile option when not daemonised.
+
+
+Release 1.1.4 (December 16, 2007)
+----------------------------------------------------------------------
+
+This release provides some enhancements to federation setup.
+
+ * Federation.Connect now accepts multiple URI's allowing federation
+   connections with the same class to more than one router.
+
+ * Hostnames in the federation configuration are now matched case
+   insensitively.
+
+ * Escapes can now be used to quote literal spaces in space-separated
+   lists in the configuration file.
+
+ * Changed default federation server domain so that it is different
+   when running multiple router instances in the same VM.
+
+
+Release 1.1.3 (December 11, 2007)
+----------------------------------------------------------------------
+
+This release corrects an error that may occur when federating over
+high-latency networks. It also improves the router's diagnostics when
+abused by badly behaved clients.
+
+ * Fixed bug that that could cause failure while establishing a
+   federation link from Windows XP to a remote host over a
+   high-latency network connection.
+
+ * Improved handling and diagnostics of bad frames.
+
+ * Adjusted JVM heap configuration to reduce memory usage under load.
+
+
+Release 1.1.2 (October 6, 2007)
+----------------------------------------------------------------------
+
+This release corrects two errors in the federation module.
+
+ * Fixed AST encoding in federation: bitwise XOR (^) and OR (|) were
+   not being encoded with the correct node ID.
+
+ * Fixed liveness checking logic that would sometimes disconnect
+   federation.
+
+ * MINA exceptions are now sent to Avis log rather than console.
+
+
+Release 1.1.1 (September 8, 2007)
+----------------------------------------------------------------------
+
+This release corrects a minor error in the subscription parser and
+fixes a Java 6 compatibility issue.
+
+ * The subscription parser prior to this release was not allowing
+   functions with no space between the name and the bracket,
+   e.g. "size(name)": this has been fixed.
+
+ * The router was using the non-public sun.text.Normalizer Unicode
+   normalizer to implement decompose () and decompose-compat (). This
+   is not available in Java 6 onwards and has been replaced by the
+   public java.text.Normalizer API. This would cause the decompose
+   methods to fail if used on Java 6 and the router to fail to compile
+   under JDK 6. The router now automatically switches between the Java
+   5 and Java 6 normalization methods depending on the platform.
+
+
+Release 1.1.0 (August 27, 2007)
+----------------------------------------------------------------------
+
+This release adds support for multi-router federation.
+
+ * Added full support for version 1.0 of the Elvin federation
+   protocol. Avis 1.1 can now form federation networks with other Avis
+   routers and Mantara elvind 4.4.
+
+ * The license for Avis has been changed from GPL version 2 to GPL
+   version 3.
+
+ * The router now supports the "Listen" configuration option to allow
+   listening on multiple network addresses.
+
+ * Improved invalid subscription reporting. The router now responds
+   with EXP_IS_TRIVIAL for constant subscriptions.
+
+ * The source code has been broken out into server, client and common
+   packages to better support the client and server side packages.
+
+ * The router now enforces stricter compliance on subscription
+   expressions. In regard to identifiers this means that expressions
+   with no space between identifier and punctuation like "size(name)"
+   are no longer valid. This is not optimal, and may change in a
+   future release: it is recommended to use spaces to avoid ambiguity.
+
+
+Release 1.0.2 (August 9, 2007)
+----------------------------------------------------------------------
+
+This release corrects a number of errors in the router and brings the
+subscription language parser in closer compliance with the
+specification. All users are advised to upgrade.
+
+ * When encoding multibyte UTF-8 characters in strings, the router was
+   not calculating the length correctly. This would lead to protocol
+   violation and disconnection.
+
+ * The router was erroneously expanding C-style escapes in strings
+   (\n, \t, etc) to their equivalent in a C string (newline, tab,
+   etc).
+
+ * The router was not applying default connection limits in its
+   configuration file (e.g. Packet.Max-Length) to client connections,
+   meaning they were effectively being ignored.
+
+ * When a packet exceeded the maximum length (Packet.Max-Length,
+   default 1 megabyte), the router was generating confusing error
+   message rather than notifying the reason in the log and in the
+   reply to the client.
+
+ * Field names may now contain a wider range of characters without
+   requiring escapes.
+
+ * Real number acceptance is slightly stricter: in particular, real
+   numbers with no leading digit are no longer accepted, e.g. ".4".
+
+
+Release 1.0.1 (May 20, 2007)
+----------------------------------------------------------------------
+
+This release corrects two bugs in the router. All users of 1.0 are
+advised to upgrade.
+
+Bug fix: the router was ignoring "acceptInsecure" in subscription
+modification (SubModRqst) messages. This meant that a client may
+receive insecure notifications when it had requested only secure
+delivery in the case that the subscription was created with
+acceptInsecure = true, but a subsequent SubModRqst change had set it
+to false.
+
+Bug fix: in subscription expressions size () was not defined for
+strings, only opaque values.
+
+
+Release 1.0 (March 24, 2007)
+----------------------------------------------------------------------
+
+Release focus: provide a baseline stable release with full Elvin 4.0
+compatibility for subsets A & B of the protocol (i.e. minus quench).
+
+Change summary:
+
+* Added RPM distribution.
+
+* Updated to Apache MINA 1.0.2.
+
+* The number of socket IO threads is now set to the number of
+  available CPU's + 1.
+
+* Expanded website, including an installation guide.
+
+* Source code cleanups and re-organisation.
+
+* Quench requests are now vetoed with the NOT_IMPL error code.
+
+* Updated connection options to match Elvin 4.0 spec changes.
+
+
+ Release 0.7 (December 27, 2006)
+----------------------------------------------------------------------
+
+Release focus: improve ease of router installation and
+configuration. Added installers/packages for Mac OS X, Fedora Core and
+Windows. Router now supports configuration options via -c switch.
+
+Change summary:
+
+ * Upgraded to Apache MINA 1.0.1.
+
+ * Quench requests now generate (non-standard) 2299 NACK code to avoid
+   making clients think they've triggered a protocol violation. This
+   results in better behaviour when using quench from je4.
+
+ * Added support for configuring server using configuration file with
+   -c option.
+
+ * Added Unix-specific options -pidfile, -logfile and -daemon to
+   bin/avisd.sh.
+
+ * Client connection options are now case-independent.
+
+ * Added packaging wrappers for Mac OS X, Fedora Core (should be
+   fairly straightforward to port to other *nix) and Windows.
+
+
+Release 0.6 (December 3, 2006)
+----------------------------------------------------------------------
+
+Release focus: improve server's ability to handle misbehaved/malicious
+clients.
+
+Change summary:
+
+ * Fixed error in buffer-limiting code which caused errors for large
+   packets.
+
+ * Added input queue bandwidth throttling to enforce
+   Receive-Queue.Max-Length. This should go a long way towards
+   protecting server from being swamped by noisy clients.
+
+ * Added various malicious client tests to observer server's response
+   to high loads, large frames and deliberate attempts to exhaust
+   resources.
+
+ * Some attack windows reduced by implementing limits for
+   Subscription.Max-Count, Subscription.Max-Length,
+   Connection.Max-Keys and Subscription.Max-Keys. Still lots of work
+   to do here though: for example client can still trigger server to
+   run out of heap using lots of subscriptions of
+   Subscription.Max-Length.
+
+ * Various extensions and fixes for SimpleClient used for testing.
+
+ * Network.Coalesce-Delay option is now Transport.TCP.Coalesce-Delay.
+
+ * Vendor ID is now sent with compatible name also.
+
+ * Reduced verbosity of -v option.
+
+
+Release 0.5 (November 20, 2006)
+----------------------------------------------------------------------
+
+ * Public project info created: website and README.txt with
+   instructions on how to get started.
+
+ * Added enforcement for Packet.Max-Length connection option. Other
+   (unsupported) size-related options changed so server doesn't lie if
+   client cares about these.
+
+ * Added handling for client protocol violations. All protocol
+   violations now trigger session close with NACK if appropriate.
+
+ * Ported from Apache MINA 0.8 API to Apache MINA 1.0 API.
+
+
+Older releases
+----------------------------------------------------------------------
+
+* 0.4: Nov 5, 2006: First public release on sourceforge.net. Added
+  concurrency support that ensures consistency when changing
+  subscriptions/keys. Implemented initial connection options handling
+  based on new spec, with compatibility support: options accepted but
+  not implemented yet, all sizes are limited only by memory and no
+  queue priority is available yet.
+
+* 0.3: Oct 15, 2006: Implemented SHA-1 security schemes, unotify,
+  quench placeholder.
+
+* 0.2: Oct 2, 2006: Completed full subscription expression support.
+
+* 0.1.2: Sep 30, 2006: fixed a few other minor bugs.
+
+* 0.1.1: Sep 30, 2006: fixed threading bug.
+
+* 0.1: Sep 30, 2006: first cut to David: no math ops in sub exprs,
+  parser would not accept function names as fields, no security,
+  unotify.
+
+* Sep 11, 2006: Project started.

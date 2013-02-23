@@ -1,0 +1,86 @@
+#!/bin/sh
+#
+# chkconfig: 2345 86 14
+# description: Starts and stops the Avis event router daemon.
+#
+# pidfile: /var/run/avisd.pid
+# config:  /etc/avis/avisd.config
+
+# Source function library.
+if [ -f /etc/init.d/functions ] ; then
+  . /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ] ; then
+  . /etc/rc.d/init.d/functions
+else
+  exit 0
+fi
+
+# Avoid using root's TMPDIR
+unset TMPDIR
+
+AVISD=__PREFIX__/sbin/avisd
+AVISD_CONFIG=/etc/avis/avisd.config
+AVISD_LOGFILE=/var/log/avisd.log
+AVISD_PIDFILE=/var/run/avisd.pid
+AVISD_OPTIONS="-daemon -c $AVISD_CONFIG -logfile $AVISD_LOGFILE -pidfile $AVISD_PIDFILE"
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && echo "No network" && exit 0
+
+# Check that avisd.config exists.
+[ -f $AVISD_CONFIG ] || ( echo "No config" && exit 0 )
+
+RETVAL=0
+
+start() {
+        KIND="Avis"
+	echo -n $"Starting $KIND service: "
+	daemon $AVISD $AVISD_OPTIONS
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/avisd || \
+	   RETVAL=1
+	return $RETVAL
+}	
+
+stop() {
+        KIND="Avis"
+	echo -n $"Shutting down $KIND service: "
+	killproc avisd
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/avisd
+	echo ""
+	return $RETVAL
+}	
+
+restart() {
+	stop
+	start
+}	
+
+# Check that we can write to it... so non-root users stop here
+[ -w $AVISD_CONFIG ] || exit 0
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart)
+  	restart
+	;;
+  condrestart)
+  	[ -f /var/lock/subsys/avisd ] && restart || :
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart|condrestart}"
+	exit 1
+esac
+
+exit $?
