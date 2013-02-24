@@ -43,13 +43,13 @@ Configuration
 
 Running with system-wide zmq
 ----------------------------
-* Because zmq and jzmq are only platform-depend parts of avis-zmqprx you can just delete them from server/lib/ directory and it will pick up your system-wide installation of zmq and jzmq (or alternativelly passed the paths in classpath,-Djava.library.path and LD\_LIBRARY\_PATH (or your platform's alternative) )
+* Because zmq and jzmq are only platform-depend parts of avis-zmqprx you can just delete them from server/lib/ directory and it will pick up your system-wide installation of zmq and jzmq (or alternativelly pass the paths in classpath,-Djava.library.path and LD\_LIBRARY\_PATH (or your platform's alternative) )
 
 Build dependencies
 ------------------
 * POSIX environment
 * unzip, tar
-* autotools (we call autogen to build jzmq)
+* autotools (needed to build jzmq)
 * ant
 * JRE (>=1.5)
 * JDK (>=1.5)
@@ -73,7 +73,7 @@ Building from source using system-wide zmq and jmq
 
 Rebuilding only bundled zmq and jzmq
 ------------------------------------
-* In case you want to rebuilding on zmq and jzmq for your platform without rebuilding complete avis-zmqprx, run following:
+* In case you want to rebuild only zmq and jzmq for your platform without rebuilding complete avis-zmqprx, run following:
 * in server directory:
 * `ant clean-third-party-from-lib`
 * `ant clean-jzmq`
