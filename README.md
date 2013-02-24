@@ -1,7 +1,7 @@
 avis\_zmqprx
 ===========
 
-Proxy between Avis and 0mq middlewares. This proxy allows you to subscribe/publish to/from avis server using 0mq.
+Proxy between Avis and 0mq middlewares. This proxy allows you to subscribe/publish to avis using 0mq.
 
 This is a simple fork of avis-router-1.2.2 which adds 0mq support. Also, support for OS X and Windows has been removed as well as RPM packaging (should you need this you will need to modify ant build config, build.xml from original avis-router-1.2.2 might be handy).
 
