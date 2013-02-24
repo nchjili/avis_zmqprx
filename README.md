@@ -3,7 +3,7 @@ avis\_zmqprx
 
 Proxy between Avis and 0mq middlewares. This proxy allows you to subscribe/publish to/from avis server using 0mq.
 
-This is a simple fork of avis-router-1.2.2 which adds 0mq support. Also, support for OS X and Windows has been removed as well as RPM packaging (should you need this you will need to modify ant build script, build.xml from original avis-router-1.2.2 might be handy).
+This is a simple fork of avis-router-1.2.2 which adds 0mq support. Also, support for OS X and Windows has been removed as well as RPM packaging (should you need this you will need to modify ant build config, build.xml from original avis-router-1.2.2 might be handy).
 
 Author
 ------
@@ -11,17 +11,17 @@ Lukas Vacek <lucas.vacek@gmail.com>
 
 License
 -------
-This program is free software; you can redistribute it and/or
-modify it under the terms of version 3 of the GNU Lesser General
-Public License as published by the Free Software Foundation.
+This program is free software; you can redistribute it and/or  
+modify it under the terms of version 3 of the GNU Lesser General  
+Public License as published by the Free Software Foundation.  
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-General Public License for more details.
+This program is distributed in the hope that it will be useful,  
+but WITHOUT ANY WARRANTY; without even the implied warranty of  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU  
+General Public License for more details.  
 
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License  
+along with this program. If not, see <http://www.gnu.org/licenses/>.  
 
 Installation
 -------------
