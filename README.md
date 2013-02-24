@@ -5,6 +5,8 @@ Proxy between Avis and 0mq middlewares. This proxy allows you to subscribe/publi
 
 This is a simple fork of avis-router-1.2.2 which adds 0mq support. Also, support for OS X and Windows has been removed as well as RPM packaging (should you need this you will need to modify ant build config, build.xml from original avis-router-1.2.2 might be handy).
 
+NOTE: All avis notifications are passed to all 0mq subscribers, 0mq subscribes should always subscribe with an empty filter
+
 Author
 ------
 Lukas Vacek <lucas.vacek@gmail.com>
@@ -28,13 +30,13 @@ Installation
 If you are running *Linux on x86 or x86-64* you only need Java JRE1.5 (SE) and then:
 * clone this repo
 * get *avis-src-1.2.2zmq\_prx-linux-x86.zip* or *avis-src-1.2.2zmq\_prx-linux-x86\_64.zip* (depending on your platform) from the repo root
-* `unzip that`
+* unzip that
 * run `bin/avisd`
 
 Configuration
 -------------
-* see original avis documentation here: http://avis.sourceforge.net/documentation.html
-* we introduce two new options in etc/avisd.config
+* see original avis documentation here: <http://avis.sourceforge.net/documentation.html>
+* avis-zmqprx introduces two new options in etc/avisd.config
     * zmq\_address - address which zmq should bind (or connect) to
     * zmq\_bind - true: bind to zmq\_address, false: connect to zmq\_address
 * *If you want to run 0mq against already deployed avis router*, you can set up fedaration between the avis router and avis-zmqprx (check out avis documentation for details)
