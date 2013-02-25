@@ -44,6 +44,11 @@ public class RouterOptionSet extends OptionSet
     add ("TLS.Keystore-Passphrase", "");
     add ("Require-Authenticated", 
          new OptionTypeFromString (InetAddressFilter.class), Filter.MATCH_NONE);
+    add("Zmq-pub-address", "tcp://127.0.0.1:5555");
+    add("Zmq-sub-address", "tcp://127.0.0.1:5556");
+    add("Zmq-pub-bind",true);
+    add("Zmq-sub-bind",false);
+    add("Zmq-send-zmq", true);
     
     inheritFrom (CONNECTION_OPTION_SET);
   }

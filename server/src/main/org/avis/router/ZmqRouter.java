@@ -28,12 +28,40 @@ import static org.avis.logging.Log.*;
 import org.zeromq.ZMQ;
 import org.codehaus.jackson.map.ObjectMapper;
 
+class ZmqNotifyEmit extends NotifyEmit
+{
+  public ZmqNotifyEmit ()
+  {
+    super ();
+  }
+  
+  public ZmqNotifyEmit (Object... attributes)
+  {
+    super (attributes);
+  }
+
+  public ZmqNotifyEmit (Map<String, Object> attributes)
+  {
+    super (attributes);
+  }
+  
+  public ZmqNotifyEmit (Map<String, Object> attributes,
+                     boolean deliverInsecure,
+                     Keys keys)
+  {
+    super (attributes, deliverInsecure, keys);
+  }
+}
+
 public class ZmqRouter
 {
   class ZmqNotifyListener implements NotifyListener {
       private ObjectMapper objectMapper = new ObjectMapper();
       @Override
       public void notifyReceived(Notify message, Keys keys) {
+          if (! zmq_send_back && message instanceof ZmqNotifyEmit) {
+              return;
+          }
           trace ("Publishing notification on ZMQ.",ZmqRouter.class);
           try {
               Map<String,Object> as_map = new HashMap<String,Object>();
@@ -99,7 +127,7 @@ public class ZmqRouter
                               as_map.put(entry.getKey(), as_long);
                           }
                       }
-                      Notify notify = new NotifyEmit(as_map);
+                      Notify notify = new ZmqNotifyEmit(as_map);
                       router.injectNotify(notify);
                       trace ("ZMQ notification received.",ZmqRouter.class);
                   } catch(IOException exc) {
@@ -126,10 +154,17 @@ public class ZmqRouter
   private ZMQ.Socket publisher;
   private ZMQ.Socket subscriber;
 
-  public ZmqRouter (Router router, String zmq_pub_address, boolean pub_bind,
-                                   String zmq_sub_address, boolean sub_bind)
+  // Publish messages received on zmq on zmq too
+  private boolean zmq_send_back = true;
+
+  public ZmqRouter (Router router, RouterOptions config)
     throws IOException
   {
+      String zmq_pub_address = config.getString("Zmq-pub-address");
+      boolean pub_bind = config.getBoolean("Zmq-pub-bind");
+      String zmq_sub_address = config.getString("Zmq-sub-address");
+      boolean sub_bind = config.getBoolean("Zmq-sub-bind");
+      zmq_send_back = config.getBoolean("Zmq-send-zmq");
       this.router = router;
 
       publisher = context.socket(ZMQ.PUB);
@@ -148,12 +183,6 @@ public class ZmqRouter
       subscriber.subscribe("".getBytes());
   }
   
-  public ZmqRouter (Router router)
-    throws IOException
-  {
-    this (router, DEFAULT_PUB_ADDRESS, true, DEFAULT_SUB_ADDRESS, false);
-  }
-
   public void start() {
       router.addNotifyListener(notifyListener);
       subscriberThread.start();

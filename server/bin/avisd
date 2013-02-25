@@ -20,7 +20,7 @@ fi
 
 usage ()
 {
-  local NL=$'\x0a'
+  local NL="\n"
   local help="\
   Usage: $0 [-h] [-v] [-vv] [-p port] [-c file] $NL\
             [-daemon] [-pidfile file] [-logfile file] $NL\
