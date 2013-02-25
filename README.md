@@ -41,11 +41,11 @@ Configuration
     * zmq\_bind - true: bind to zmq\_address, false: connect to zmq\_address
 * *If you want to run 0mq against already deployed avis router*, you can set up fedaration between the avis router and avis-zmqprx (check out avis documentation for details)
 
-AVIS types <-> 0mq conversion
+AVIS <-> 0mq type conversion
 -----------------------------
-Because avis messages are structured (type,name,value) but 0mq messages are just chunk of bytes it's necessary to provide some represantion on top of 0mq - avis\_zmqprx uses JSON (RFC 4627) for this. So the message you receive from zmq socket is a standard json object (this is really handy if you are using higher-level language bindings for zmq, isn't it?)
+Because avis messages are structured (type,name,value) but 0mq messages are just chunk of bytes it's necessary to provide some represantion on top of 0mq - avis\_zmqprx uses JSON (RFC 4627) for this. So the message you send to/receive from zmq socket is a standard json object. 
 
-Details on mapping between AVIS types and what you will receive:
+Details on mapping between AVIS and 0mq types:
 * AVIS: INT32 or INT64, JSON: integer
 * AVIS: REAL64, JSON: Real (in case REAL64 was NaN, JSON representation is a null)
 * AVIS: STRING, JSON: String
