@@ -36,9 +36,12 @@ If you are running *Linux on x86 or x86-64* you only need Java JRE1.5 (SE) and t
 Configuration
 -------------
 * see original avis documentation here: <http://avis.sourceforge.net/documentation.html>
-* avis-zmqprx introduces two new options in etc/avisd.config
-    * zmq\_address - address which zmq should bind (or connect) to
-    * zmq\_bind - true: bind to zmq\_address, false: connect to zmq\_address
+* avis-zmqprx introduces following new options in etc/avisd.config
+    * Zmq-pub-address (default: tcp://127.0.0.1:5555) - zmq url to publish on
+    * Zmq-sub-address (default: tcp://127.0.0.1:5556) - zmq url to subscribe to
+    * Zmq-pub-bind (default: true) - bind(true) or connect(false) to zmq-pub-address?
+    * Zmq-sub-bind (default: false) - bind(true) or connect(false) to zmq-sub-address?
+    * Zmq-send-zmq (default: true) - Send messages received on zmq to zmq subscribers
 * *If you want to run 0mq against already deployed avis router*, you can set up fedaration between the avis router and avis-zmqprx (check out avis documentation for details)
 
 AVIS <-> 0mq type conversion
