@@ -19,6 +19,7 @@ package org.avis.router;
 
 import java.util.*;
 import java.lang.*;
+import java.math.BigInteger;
 import java.io.*;
 import org.avis.io.messages.*;
 import org.avis.security.Keys;
@@ -27,43 +28,12 @@ import static org.avis.logging.Log.*;
 import org.zeromq.ZMQ;
 import org.codehaus.jackson.map.ObjectMapper;
 
-/* When we inject a notify we use this class,
- * so in our NotifyListener we can check if the notification
- * is a instance of ZmqNotifyEmit and if so, just ignore it */
-class ZmqNotifyEmit extends NotifyEmit
-{
-  public ZmqNotifyEmit ()
-  {
-    super ();
-  }
-  
-  public ZmqNotifyEmit (Object... attributes)
-  {
-    super (attributes);
-  }
-
-  public ZmqNotifyEmit (Map<String, Object> attributes)
-  {
-    super (attributes);
-  }
-  
-  public ZmqNotifyEmit (Map<String, Object> attributes,
-                     boolean deliverInsecure,
-                     Keys keys)
-  {
-    super (attributes, deliverInsecure, keys);
-  }
-}
-
 public class ZmqRouter
 {
   class ZmqNotifyListener implements NotifyListener {
       private ObjectMapper objectMapper = new ObjectMapper();
       @Override
       public void notifyReceived(Notify message, Keys keys) {
-          if (message instanceof ZmqNotifyEmit) {
-              return;
-          }
           trace ("Publishing notification on ZMQ.",ZmqRouter.class);
           try {
               Map<String,Object> as_map = new HashMap<String,Object>();
@@ -121,10 +91,15 @@ public class ZmqRouter
                               List l = (List)entry.getValue();
                               byte[] data = objectMapper.convertValue(l.get(0) ,byte[].class);
                               as_map.put(entry.getKey(), data );
+                          } else if (entry.getValue() instanceof BigInteger) {
+                              warn("Too big Integer received on ZMQ, truncating.",ZmqRouter.class);
+                              BigInteger orig_val = (BigInteger)entry.getValue();
+                              Double as_double = (Double)(orig_val.doubleValue());
+                              Long as_long = (Long)(as_double.longValue());
+                              as_map.put(entry.getKey(), as_long);
                           }
                       }
-                      System.out.println(as_map);
-                      Notify notify = new ZmqNotifyEmit(as_map);
+                      Notify notify = new NotifyEmit(as_map);
                       router.injectNotify(notify);
                       trace ("ZMQ notification received.",ZmqRouter.class);
                   } catch(IOException exc) {
