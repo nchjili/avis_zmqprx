@@ -41,6 +41,18 @@ Configuration
     * zmq\_bind - true: bind to zmq\_address, false: connect to zmq\_address
 * *If you want to run 0mq against already deployed avis router*, you can set up fedaration between the avis router and avis-zmqprx (check out avis documentation for details)
 
+AVIS types <-> 0mq conversion
+-----------------------------
+Because avis messages are structured (type,name,value) but 0mq messages are just chunk of bytes it's necessary to provide some represantion on top of 0mq - avis\_zmqprx uses JSON (RFC 4627) for this. So the message you receive from zmq socket is a standard json object (this is really handy if you are using higher-level language bindings for zmq, isn't it?)
+
+Details on mapping between AVIS types and what you will receive:
+* AVIS: INT32 or INT64, JSON: integer
+* AVIS: REAL64, JSON: Real (in case REAL64 was NaN, JSON representation is a null)
+* AVIS: STRING, JSON: String
+* AVIS: OPAQUE, JSON: an array containing one Base64-encoded String
+
+The reason why Avis' Opaque is represented as an array of one String is to allow the client to distinguish between Avis' Opaque and String types when both receiving and sending data.
+
 Running with system-wide zmq
 ----------------------------
 * Because zmq and jzmq are only platform-depend parts of avis-zmqprx you can just delete them from server/lib/ directory and it will pick up your system-wide installation of zmq and jzmq (or alternativelly pass the paths in classpath,-Djava.library.path and LD\_LIBRARY\_PATH (or your platform's alternative) )
@@ -70,6 +82,10 @@ Building from source using system-wide zmq and jmq
 * make sure you have all build dependencies installed
 * ant takes an optional -Dzmq-no-bundle=true parameter to ignore bundled zmq and build against system-wide installation instead
 * thus you can run, for example, `ant -Dzmq-no-bundle=true jar-server`
+
+Building for older JRE than your JDK version
+--------------------------------------------
+* use `-Dant.build.javac.target<version>` parameter for ant, for example `-Dant.build.javac.target1.5`
 
 Rebuilding only bundled zmq and jzmq
 ------------------------------------

@@ -48,10 +48,6 @@ import static org.avis.util.Streams.fileStream;
 import static org.avis.util.Streams.propertiesFrom;
 import static org.avis.util.Streams.resourceStream;
 
-import org.zeromq.ZMQ;
-import org.codehaus.jackson.map.ObjectMapper;
-import java.util.Map;
-
 /**
  * Invokes the Avis router from the command line.
  * 
@@ -69,12 +65,6 @@ public class Main
   public static void main (String [] args)
     throws Exception
   {
-    // example use of ZMQ and JACKSON libraries to make sure we link
-    // them properly - TODO: delete me
-    ZMQ.Context context = ZMQ.context(1);
-    ObjectMapper mapper = new ObjectMapper();
-    Map<String,Object> as_json = mapper.readValue("{\"a\":\"b\"}",Map.class);
-
     Log.setApplicationName ("Avis");
     
     enableLogging (TRACE, false);
@@ -88,7 +78,10 @@ public class Main
     
     try
     {
+      // TODO: load zmq_address and zmq_bind from etc/avisd.conf
       final Router router = start (args);
+      final ZmqRouter zmqRouter = new ZmqRouter(router);
+      zmqRouter.start();
 
       Runtime.getRuntime ().addShutdownHook (new Thread ()
       {
@@ -97,6 +90,7 @@ public class Main
           info ("Shutting down...", Main.class);
           
           router.close ();
+          zmqRouter.close();
         }
       });
       
