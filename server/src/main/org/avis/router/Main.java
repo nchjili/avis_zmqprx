@@ -78,11 +78,8 @@ public class Main
     
     try
     {
-      // TODO: load zmq_address and zmq_bind from etc/avisd.conf
-      RouterOptions config = setupConfig(args);
-      final Router router = start (config);
-      final ZmqRouter zmqRouter = new ZmqRouter(router,config);
-      zmqRouter.start();
+      final Router router = start (args);
+      final ZmqRouter zmqRouter = startZmqRouter(router, args);
 
       Runtime.getRuntime ().addShutdownHook (new Thread ()
       {
@@ -141,29 +138,28 @@ public class Main
     }
   }
 
+  public static ZmqRouter startZmqRouter (Router router, String... args) throws IOException {
+    RouterOptionSet routerOptionSet = new RouterOptionSet ();
+    RouterOptions config = new RouterOptions (routerOptionSet);
+    parseCommandLine (args, config);
+
+    ZmqRouter zmqRouter = new ZmqRouter(router,config);
+    zmqRouter.start();
+    return zmqRouter;
+  }
+
   /**
    * Create and start a router with a given set of command line
    * arguments.
    * 
-   * @param config Contains router configuration.
+   * @param args Command line arguments.
    * 
    * @return The new router instance.
    * 
    * @throws IllegalConfigOptionException
    * @throws IOException
    */
-  public static Router start (RouterOptions config)
-    throws IllegalConfigOptionException, IOException
-  {
-    Router router = new Router (config);
-    
-    if (config.getBoolean ("Federation.Activated"))
-      new FederationManager (router, config);
-
-    return router;
-  }
-
-  private static RouterOptions setupConfig(String... args) {
+  public static Router start (String... args) throws IOException {
     RouterOptionSet routerOptionSet = new RouterOptionSet ();
     
     // add federation options to router's option set
@@ -173,7 +169,12 @@ public class Main
     
     parseCommandLine (args, config);
 
-    return config;
+    Router router = new Router (config);
+    
+    if (config.getBoolean ("Federation.Activated"))
+      new FederationManager (router, config);
+
+    return router;
   }
   
   private static void parseCommandLine (String [] args,
