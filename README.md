@@ -88,7 +88,7 @@ Building from source using system-wide zmq and jmq
 
 Building for older JRE than your JDK version
 --------------------------------------------
-* use `-Dant.build.javac.target<version>` parameter for ant, for example `-Dant.build.javac.target1.5`
+* use `-Dant.build.javac.target <version>` parameter for ant, for example `-Dant.build.javac.target 1.5`
 
 Rebuilding only bundled zmq and jzmq
 ------------------------------------

@@ -175,6 +175,10 @@
   <target name="copy-third-party-to-lib"
     depends="compile-jzmq,compile-zmq"
     unless="zmq-no-bundle">
+    <exec executable="mkdir" dir="${server}">
+      <arg value="-p"/>
+      <arg value="lib"/>
+    </exec>
     <exec executable="sh" dir="${server}/lib">
       <arg value="-c"/>
       <arg value="cp -d ${third_party}/installed_zmq/lib/libzmq*.so* ."/>
