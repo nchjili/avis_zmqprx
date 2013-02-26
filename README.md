@@ -31,7 +31,7 @@ If you are running *Linux on x86 or x86-64* you only need Java JRE1.5 (SE) and t
 * clone this repo
 * get *avis-src-1.2.2zmq\_prx-linux-x86.zip* or *avis-src-1.2.2zmq\_prx-linux-x86\_64.zip* (depending on your platform) from the repo root
 * unzip that
-* run `bin/avisd`
+* run `server/bin/avisd`
 
 Configuration
 -------------
