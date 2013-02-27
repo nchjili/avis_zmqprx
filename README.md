@@ -65,6 +65,9 @@ Build dependencies
 * POSIX environment
 * unzip, tar
 * autotools (needed to build jzmq)
+* libtool
+* C compiler
+* C++ compiler
 * ant
 * JRE (>=1.5)
 * JDK (>=1.5)
